@@ -22,10 +22,7 @@ def add_expense():
          'date': date 
     }
     expenses.append(expense)
-
-
 add_expense()
-
 
 def filter_expenses():
     choice = input("Filter by category or date? (c/d): ")
@@ -42,7 +39,32 @@ def filter_expenses():
     if not filtered_expenses:
         print("No expenses found")
 filter_expenses()
+
 def view_expenses():
     for expense in expenses:
         print(f"ID: {expense['id']}, Amount: {expense['amount']}, Category: {expense['category']}, Description: {expense['description']}, Date: {expense['date']}")
 view_expenses()
+ 
+
+def summary():
+    total = 0
+    for expense in expenses:
+        total += expense['amount']
+    print(f"Total expenses: {total}")
+    spending_by_category = {}
+    for expense in expenses:
+        category = expense['category']
+        spending_by_category[category] = spending_by_category.get(category, 0) + expense['amount']
+    print(f"Spending by category: {spending_by_category}")
+    highest_expense = max(expenses, key=lambda x: x['amount'])
+    print(f"Highest expense: ID {highest_expense['id']}, Amount: {highest_expense['amount']}, Category: {highest_expense['category']}, Description: {highest_expense['description']}, Date: {highest_expense['date']}")
+summary()
+
+def delete_expense():
+    id = int(input("Enter the ID of the expense to delete: "))
+    for expense in expenses:
+        if expense['id'] == id:
+            expenses.remove(expense)
+            print(f"Expense with ID {id} deleted.")
+    print(f"No expense found with ID {id}.")
+delete_expense()
