@@ -25,11 +25,24 @@ def save_expenses():
 
 
 def add_expense():
-    amount = float(input("Enter the amount: "))
+    try:
+        amount = float(input("Enter the amount: ")) 
+    except ValueError:
+        print("Invalid amount. Please enter a valid number.")
+        return
+    if amount <= 0:
+        print("Amount must be greater than zero.")
+        return 
     highest_id = max([expense['id'] for expense in expenses], default=0)
     id = highest_id + 1 
     category = input("Enter the category: ")
+    if category.strip() == "":
+        print("Category cannot be empty.")
+        return
     description = input("Enter the description: ")
+    if description.strip() == "":
+        print("Description cannot be empty.")
+        return
     date = input("Enter the date (YYYY-MM-DD): ")
     try:
         datetime.datetime.strptime(date, '%Y-%m-%d')
@@ -49,10 +62,11 @@ def add_expense():
 
 
 def delete_expense():
-    wanna_delete = input("Do you want to delete an expense? (y/n): ")
-    if wanna_delete.lower() != 'y':
+    try:
+        id = int(input("Enter the ID of the expense to delete: "))
+    except ValueError:
+        print("Invalid ID. Please enter a valid number.")
         return
-    id = int(input("Enter the ID of the expense to delete: "))
     for expense in expenses:
         if expense['id'] == id:
             expenses.remove(expense)
@@ -81,6 +95,8 @@ def filter_expenses():
                 print("No expenses found.")
         for expense in filtered_expenses:
             print(f"ID: {expense['id']}, Amount: {expense['amount']}, Category: {expense['category']}, Description: {expense['description']}, Date: {expense['date']}")
+    else:
+            print("Invalid choice. Please enter 'c' or 'd'.")
 
 
 def view_expenses():
