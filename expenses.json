@@ -61,5 +61,19 @@
         "category": "cat",
         "description": "black",
         "date": "2022-03-15"
+    },
+    {
+        "id": 11,
+        "amount": 22.0,
+        "category": "blue",
+        "description": "sea",
+        "date": "2022-02-25"
+    },
+    {
+        "id": 12,
+        "amount": 20.0,
+        "category": "cat",
+        "description": "smol cat",
+        "date": "2021-05-22"
     }
 ]
