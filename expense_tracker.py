@@ -4,12 +4,15 @@ from datetime import datetime
 expenses = []
 def save_expenses():
 	with open("expenses.json" , 'w')as f:
-		json.dump(expenses, f)
+		json.dump(expenses, f, indent= 4)
 
 def load_expenses():
 	global expenses
-	with open("expenses.json" , 'r')as f:
-		expenses = json.load(f)
+	try:
+		with open("expenses.json" , 'r')as f:
+			expenses = json.load(f)
+	except FileNotFoundError:
+		print("The file doesn't exist")
 
 
 
@@ -64,7 +67,7 @@ def filter_expense():
 	if filtered_expenses == "c":
 		filtered_cat =input("Enter the category: ")
 		filtered_cat =[expense for expense in expenses if expense.get("category") == filtered_cat]
-		print(filtered_cat.lower)
+		print(filtered_cat)
 	elif filtered_expenses == "d":
 		filtered_date =input("Enter the date (DD/MM/YYYY): ")
 		filtered_date =[expense for expense in expenses if expense.get("date") == filtered_date]
@@ -72,6 +75,7 @@ def filter_expense():
 	else:
 		print("Please choose either c or d")
 		return
+
 
 def total_expenses():
 	total = 0
