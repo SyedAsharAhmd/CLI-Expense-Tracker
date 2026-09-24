@@ -1,16 +1,53 @@
-from fastapi import FastAPI , HTTPException , status 
+from fastapi import FastAPI , HTTPException , status , Path
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.exceptions import RequestValidationError
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
+from contextlib import asynccontextmanager
 from datetime import datetime
+from typing import Annotated
 import sqlite3
+from database import init_db
+
+DATE_FORMAT = "%d/%m/%Y"
+# SQLite INTEGER is 64-bit; larger ids would raise OverflowError
+ExpenseId = Annotated[int, Path(ge=1, le=2**63 - 1)]
 
 class CreateExpenses (BaseModel):
-    amount: float
-    category: str
-    description: str
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    amount: float = Field(allow_inf_nan=False)
+    category: str = Field(min_length=1)
+    description: str = Field(min_length=1)
     date: str
 
-app = FastAPI()
+def normalize_date(value: str) -> str:
+    # "1/2/2026" and "01/02/2026" are the same day, so store one canonical form
+    try:
+        return datetime.strptime(value.strip(), DATE_FORMAT).strftime(DATE_FORMAT)
+    except ValueError:
+        raise HTTPException(
+        status_code= status.HTTP_400_BAD_REQUEST,
+        detail = "Invalid Date format"
+        )
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    # The default handler echoes the rejected input back, which crashes on
+    # values like inf/NaN that can't be serialized to JSON, so leave it out
+    errors = [{k: v for k, v in error.items() if k != "input"} for error in exc.errors()]
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content={"detail": jsonable_encoder(errors)},
+    )
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -50,7 +87,7 @@ def view_expenses():
 
 
 @app.get("/expenses/{id}")
-def get_expenses(id : int):
+def get_expenses(id : ExpenseId):
     connection = sqlite3.connect("expenses.db")
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
@@ -67,34 +104,29 @@ def get_expenses(id : int):
 
 @app.post("/expenses")
 def post_expenses(expense_data : CreateExpenses):
-    connection = sqlite3.connect("expenses.db")
-    cursor = connection.cursor()
     if expense_data.amount <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail= "expense must be greater than zero")
-    date_format = "%d/%m/%Y"
-    try:
-        datetime.strptime(expense_data.date, date_format)
-    except ValueError:
-        raise HTTPException(
-        status_code= status.HTTP_400_BAD_REQUEST,
-        detail = "Invalid Date format"
-        )
-    cursor.execute(" INSERT INTO expenses (amount, category , description , date ) VALUES ( ?, ?, ?, ?)",(expense_data.amount, expense_data.category, expense_data.description, expense_data.date) )          
+    date = normalize_date(expense_data.date)
+    connection = sqlite3.connect("expenses.db")
+    cursor = connection.cursor()
+    cursor.execute(" INSERT INTO expenses (amount, category , description , date ) VALUES ( ?, ?, ?, ?)",(expense_data.amount, expense_data.category, expense_data.description, date) )
     connection.commit()
 
     new_expense = {
     "amount": expense_data.amount,
     "category": expense_data.category,
     "description": expense_data.description,
-    "date": expense_data.date,
+    "date": date,
     }
     connection.close()
     return new_expense
 
 @app.get("/expenses")
 def filter_expenses(category : str |None = None , date : str | None = None):
+    if date:
+        date = normalize_date(date)
     connection = sqlite3.connect("expenses.db")
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()
@@ -107,7 +139,7 @@ def filter_expenses(category : str |None = None , date : str | None = None):
        
     
 @app.delete("/expenses/{id}")
-def delete_expenses(id : int):
+def delete_expenses(id : ExpenseId):
     connection = sqlite3.connect("expenses.db")
     connection.row_factory = sqlite3.Row
     cursor = connection.cursor()

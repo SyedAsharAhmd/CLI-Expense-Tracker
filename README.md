@@ -21,7 +21,7 @@ A full-stack expense tracker: a FastAPI + SQLite backend with a React (Vite) fro
 ```
 Expense Tracker/
 ├── main.py              # FastAPI app and routes
-├── database.py          # creates the SQLite expenses table
+├── database.py          # creates the SQLite expenses table (run on startup)
 ├── pyproject.toml       # backend dependencies (uv)
 └── frontend/            # React + Vite app
     └── src/
@@ -37,7 +37,6 @@ Requires Python 3.14+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
-uv run python database.py       # creates expenses.db with the expenses table
 uv run uvicorn main:app --reload --port 8000
 ```
 
@@ -69,4 +68,4 @@ Dates are expected in `DD/MM/YYYY` format.
 ## Notes
 
 - CORS is configured for the Vite dev server at `http://localhost:5173`.
-- `expenses.db` is gitignored — run `database.py` once to create it locally.
+- `expenses.db` is gitignored — it is created automatically when the API starts.
