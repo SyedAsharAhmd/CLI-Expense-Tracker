@@ -11,20 +11,44 @@ function ExpenseForm({ onExpenseAdded }) {
     event.preventDefault();
     setError("");
 
-    const response = await fetch("http://localhost:8000/expenses", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        amount: parseFloat(amount),
-        category,
-        description,
-        date,
-      }),
-    });
+    const parsedAmount = Number(amount);
+    if (amount.trim() === "" || !Number.isFinite(parsedAmount)) {
+      setError("Amount must be a number");
+      return;
+    }
+    if (parsedAmount <= 0) {
+      setError("Amount must be greater than zero");
+      return;
+    }
+    if (!category.trim() || !description.trim() || !date.trim()) {
+      setError("Category, description and date are required");
+      return;
+    }
+
+    let response;
+    try {
+      response = await fetch("http://localhost:8000/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: parsedAmount,
+          category: category.trim(),
+          description: description.trim(),
+          date: date.trim(),
+        }),
+      });
+    } catch {
+      setError("Could not reach the server. Is the backend running?");
+      return;
+    }
 
     if (!response.ok) {
-      const errorData = await response.json();
-      setError(errorData.detail || "Failed to add expense");
+      const errorData = await response.json().catch(() => ({}));
+      setError(
+        typeof errorData.detail === "string"
+          ? errorData.detail
+          : "Failed to add expense"
+      );
       return;
     }
 

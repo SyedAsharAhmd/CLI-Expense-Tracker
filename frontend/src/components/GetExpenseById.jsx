@@ -10,16 +10,30 @@ function GetExpenseById() {
     setError("");
     setExpense(null);
 
-    const response = await fetch(`http://localhost:8000/expenses/${id}`);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      setError(errorData.detail || "Failed to fetch expense");
+    const trimmedId = id.trim();
+    if (!/^\d+$/.test(trimmedId)) {
+      setError("Enter a numeric ID");
       return;
     }
 
-    const data = await response.json();
-    setExpense(data);
+    try {
+      const response = await fetch(`http://localhost:8000/expenses/${trimmedId}`);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        setError(
+          typeof errorData.detail === "string"
+            ? errorData.detail
+            : "Failed to fetch expense"
+        );
+        return;
+      }
+
+      const data = await response.json();
+      setExpense(data);
+    } catch {
+      setError("Could not reach the server. Is the backend running?");
+    }
   }
 
   return (

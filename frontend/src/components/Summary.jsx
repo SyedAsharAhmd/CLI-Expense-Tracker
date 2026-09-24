@@ -1,21 +1,35 @@
 import { useState, useEffect } from "react";
 
-function Summary() {
+function Summary({ refreshKey }) {
   const [summary, setSummary] = useState(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchSummary() {
-      const response = await fetch("http://localhost:8000/expenses/summary");
-      const data = await response.json();
-      setSummary(data);
+      try {
+        const response = await fetch("http://localhost:8000/expenses/summary");
+        if (!response.ok) {
+          setError("Failed to load summary");
+          return;
+        }
+        const data = await response.json();
+        setSummary(data);
+        setError("");
+      } catch {
+        setError("Could not reach the server. Is the backend running?");
+      }
     }
     fetchSummary();
-  }, []);
+  }, [refreshKey]);
 
   if (!summary) {
     return (
       <section className="summary">
-        <p className="empty-state">Loading summary...</p>
+        {error ? (
+          <p className="error-text">{error}</p>
+        ) : (
+          <p className="empty-state">Loading summary...</p>
+        )}
       </section>
     );
   }
@@ -23,6 +37,7 @@ function Summary() {
   return (
     <section className="summary">
       <h2>Summary</h2>
+      {error && <p className="error-text">{error}</p>}
       <div className="summary-stats">
         <div className="stat">
           <span className="stat-label">Total spent</span>

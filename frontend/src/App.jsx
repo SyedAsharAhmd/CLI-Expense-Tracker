@@ -9,39 +9,75 @@ import "./App.css";
 function App() {
   const [expenses, setExpenses] = useState([]);
   const [filterMessage, setFilterMessage] = useState("");
+  const [error, setError] = useState("");
+  const [summaryVersion, setSummaryVersion] = useState(0);
+
+  function refreshSummary() {
+    setSummaryVersion((v) => v + 1);
+  }
 
   async function fetchExpenses() {
     setFilterMessage("");
-    const response = await fetch("http://localhost:8000/expenses/view");
-    const data = await response.json();
-    setExpenses(data);
+    setError("");
+    try {
+      const response = await fetch("http://localhost:8000/expenses/view");
+      if (!response.ok) {
+        setError("Failed to load expenses");
+        return;
+      }
+      const data = await response.json();
+      setExpenses(data);
+    } catch {
+      setError("Could not reach the server. Is the backend running?");
+    }
   }
 
   async function fetchFilteredExpenses(category, date) {
     setFilterMessage("");
+    setError("");
     const params = new URLSearchParams();
-    if (category) params.set("category", category);
-    if (date) params.set("date", date);
+    if (category.trim()) params.set("category", category.trim());
+    if (date.trim()) params.set("date", date.trim());
 
-    const response = await fetch(
-      `http://localhost:8000/expenses?${params.toString()}`
-    );
-    const data = await response.json();
+    try {
+      const response = await fetch(
+        `http://localhost:8000/expenses?${params.toString()}`
+      );
+      if (!response.ok) {
+        setError("Failed to filter expenses");
+        return;
+      }
+      const data = await response.json();
 
-    setExpenses(data);
-    setFilterMessage(data.length === 0 ? "No expenses match that filter." : "");
+      setExpenses(data);
+      setFilterMessage(data.length === 0 ? "No expenses match that filter." : "");
+    } catch {
+      setError("Could not reach the server. Is the backend running?");
+    }
   }
 
   async function deleteExpense(id) {
-    const response = await fetch(`http://localhost:8000/expenses/${id}`, {
-      method: "DELETE",
-    });
+    setError("");
+    try {
+      const response = await fetch(`http://localhost:8000/expenses/${id}`, {
+        method: "DELETE",
+      });
 
-    if (!response.ok) {
-      return;
+      if (!response.ok) {
+        setError("Failed to delete expense");
+        return;
+      }
+
+      setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+      refreshSummary();
+    } catch {
+      setError("Could not reach the server. Is the backend running?");
     }
+  }
 
-    setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+  function handleExpenseAdded() {
+    fetchExpenses();
+    refreshSummary();
   }
 
   return (
@@ -50,7 +86,7 @@ function App() {
         <h1>Expense Tracker</h1>
       </header>
 
-      <Summary />
+      <Summary refreshKey={summaryVersion} />
 
       <section className="toolbar">
         <ViewExpense fetchExpenses={fetchExpenses} />
@@ -61,6 +97,7 @@ function App() {
       <section className="expenses">
         <h2>Expenses</h2>
 
+        {error && <p className="error-text">{error}</p>}
         {filterMessage && <p className="empty-state">{filterMessage}</p>}
 
         {expenses.length === 0 && !filterMessage ? (
@@ -106,7 +143,7 @@ function App() {
         )}
       </section>
 
-      <ExpenseForm onExpenseAdded={fetchExpenses} />
+      <ExpenseForm onExpenseAdded={handleExpenseAdded} />
     </div>
   );
 }
